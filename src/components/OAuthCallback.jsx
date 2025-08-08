@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const OAuthCallback = () => {
   const [tokenData, setTokenData] = useState(null);
   const [webhookStatus, setWebhookStatus] = useState('checking');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [webhookMessage, setWebhookMessage] = useState('');
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -40,6 +43,31 @@ const OAuthCallback = () => {
     }
   };
 
+  const handleSubscribeToWebhook = async () => {
+    setIsSubscribing(true);
+    setWebhookMessage('');
+
+    try {
+      // Subscribe to webhook
+      const response = await axios.post('http://localhost:5000/api/google/subscribe-webhook', {
+        access_token: tokenData.access_token
+      });
+
+      if (response.data.success) {
+        setWebhookMessage('✅ Webhook subscription successful!');
+        setWebhookStatus('success');
+      } else {
+        setWebhookMessage('❌ Webhook subscription failed');
+        setWebhookStatus('failed');
+      }
+    } catch (error) {
+      setWebhookMessage(`❌ Error: ${error.response?.data?.error || error.message}`);
+      setWebhookStatus('failed');
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
   return (
     <div style={{ padding: 20 }}>
       <h2>✅ Token Info</h2>
@@ -50,11 +78,36 @@ const OAuthCallback = () => {
           <p><strong>Token Type:</strong> {tokenData.token_type}</p>
           <p><strong>Token Expires At:</strong> {tokenData.expires_at}</p>
           
-          <div style={{ marginTop: 20, padding: 10, border: '1px solid #ccc', borderRadius: 5 }}>
-            <h3>🔗 Webhook Subscription Status</h3>
-            {webhookStatus === 'checking' && <p>🔄 Checking webhook subscription...</p>}
-            {webhookStatus === 'success' && <p>✅ Webhook subscription successful!</p>}
-            {webhookStatus === 'failed' && <p>❌ Webhook subscription failed</p>}
+          <div style={{ marginTop: 20, padding: 15, backgroundColor: '#f0f8ff', borderRadius: 5 }}>
+            <h3>🔗 Subscribe to Webhook</h3>
+            <p>Click the button below to subscribe to webhooks:</p>
+            <button
+              onClick={handleSubscribeToWebhook}
+              disabled={isSubscribing}
+              style={{
+                padding: '12px 24px',
+                fontSize: '16px',
+                backgroundColor: '#4CAF50',
+                color: 'white',
+                border: 'none',
+                borderRadius: 5,
+                cursor: isSubscribing ? 'not-allowed' : 'pointer',
+                opacity: isSubscribing ? 0.7 : 1
+              }}
+            >
+              {isSubscribing ? '🔄 Subscribing...' : '🔗 Subscribe to Webhook'}
+            </button>
+            {webhookMessage && (
+              <div style={{ 
+                marginTop: 10, 
+                padding: 10,
+                backgroundColor: webhookMessage.includes('✅') ? '#e8f5e8' : '#ffe8e8',
+                borderRadius: 5,
+                border: `1px solid ${webhookMessage.includes('✅') ? '#4CAF50' : '#F44336'}`
+              }}>
+                {webhookMessage}
+              </div>
+            )}
           </div>
         </>
       ) : (

@@ -1,11 +1,11 @@
 const axios = require('axios');
 
-const CLIENT_ID = 'YOUR_CLIENT_ID';
-const CLIENT_SECRET = 'YOUR_CLIENT_SECRET';
-
 let accessToken = null;
 let refreshToken = null;
 let tokenExpiryTime = null;
+
+const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 
 const setTokenData = (tokenData) => {
   accessToken = tokenData.access_token;

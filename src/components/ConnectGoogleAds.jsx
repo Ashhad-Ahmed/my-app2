@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID ;
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const REDIRECT_URI = import.meta.env.VITE_GOOGLE_REDIRECT_URI;
 const SCOPE = 'https://www.googleapis.com/auth/adwords';
 

@@ -2,7 +2,6 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 const tokenService = require('../services/googleTokenService');
-require('dotenv').config();
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -26,7 +25,7 @@ router.post('/exchange-code', async (req, res) => {
 
     // Step 2: Store token data
     tokenService.setTokenData(tokenResponse.data);
-
+    
     // Step 3: Subscribe to webhook after successful login
     try {
       await subscribeToWebhooks(tokenResponse.data.access_token);
@@ -34,7 +33,7 @@ router.post('/exchange-code', async (req, res) => {
     } catch (webhookError) {
       console.error('❌ Webhook subscription failed:', webhookError.message);
     }
-
+    
     res.status(200).json(tokenResponse.data);
   } catch (error) {
     res.status(500).json({ error: 'Failed to exchange code' });
@@ -50,14 +49,14 @@ async function subscribeToWebhooks(accessToken) {
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN || 'TEST_DEVELOPER_TOKEN'
+          'developer-token': 'TEST_DEVELOPER_TOKEN' // TODO: Get from Google Ads API Center
         }
       }
     );
-
+    
     const customerId = customerResponse.data.results[0].id;
     console.log('👤 Customer ID:', customerId);
-
+    
     // Subscribe to Google Ads webhook
     const webhookResponse = await axios.post(
       `https://googleads.googleapis.com/v14/customers/${customerId}/googleAds:searchStream`,
@@ -75,19 +74,19 @@ async function subscribeToWebhooks(accessToken) {
       {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
-          'developer-token': process.env.GOOGLE_ADS_DEVELOPER_TOKEN || 'TEST_DEVELOPER_TOKEN',
+          'developer-token': 'TEST_DEVELOPER_TOKEN', // TODO: Get from Google Ads API Center
           'login-customer-id': customerId,
           'Content-Type': 'application/json'
         }
       }
     );
-
+    
     console.log('✅ Webhook subscription successful for customer:', customerId);
-
+    
     // Store subscription status
     global.webhookSubscribed = true;
     global.customerId = customerId;
-
+    
     return {
       success: true,
       customerId: customerId,
@@ -110,6 +109,29 @@ router.get('/get-valid-token', async (req, res) => {
   }
 });
 
+// 🔗 Manual Webhook Subscription Endpoint
+router.post('/subscribe-webhook', async (req, res) => {
+  const { access_token } = req.body;
+  
+  if (!access_token) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Access token is required' 
+    });
+  }
+
+  try {
+    const result = await subscribeToWebhooks(access_token);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('❌ Manual webhook subscription failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error.response?.data?.error || error.message 
+    });
+  }
+});
+
 // 📨 Webhook Endpoint to Receive Notifications
 router.post('/webhook', (req, res) => {
   console.log('📨 Webhook received:', req.body);
@@ -119,7 +141,7 @@ router.post('/webhook', (req, res) => {
 // �� Webhook Status Endpoint
 router.get('/webhook-status', (req, res) => {
   // Return actual subscription status
-  res.status(200).json({
+  res.status(200).json({ 
     subscribed: global.webhookSubscribed || false,
     customerId: global.customerId || null,
     lastChecked: new Date().toISOString(),
